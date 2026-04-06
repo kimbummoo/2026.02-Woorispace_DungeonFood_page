@@ -59,7 +59,7 @@ window.initMediaPipe = async (successFunc) => {
                 if (typeof successFunc === "function") successFunc();
             }, { once: true });
         }
-    } 
+    }
     catch (error) {
         console.error("MediaPipe 초기화 실패:", error);
     }
@@ -78,8 +78,8 @@ async function predict() {
     }
 
     // 비디오 기반인 경우 videoWidth 사용
-    const width     = inputCanvas.videoWidth || inputCanvas.width;
-    const height    = inputCanvas.videoHeight || inputCanvas.height;
+    const width = inputCanvas.videoWidth || inputCanvas.width;
+    const height = inputCanvas.videoHeight || inputCanvas.height;
 
     const startTimeMs = performance.now();
 
@@ -98,9 +98,9 @@ function handleResults(results, width, height) {
         const landmarks = results.faceLandmarks[0];
 
         // 1. 시각화 (제거됨 - Unity에서 수행)
-        
+
         // 2. 필요 시 데이터 가공
-        
+
         // 주요 랜드마크 추출 (인덱스 참고: 기본 코눈턱 등)
         let noseTip = landmarks[1];
         let leftEye = landmarks[33];
@@ -108,19 +108,28 @@ function handleResults(results, width, height) {
         let topOfHead = landmarks[10];
         let bottomOfChin = landmarks[152];
 
+        // --- 거리(Distance) 계산 ---
+        let dx = rightEye.x - leftEye.x;
+        let dy = rightEye.y - leftEye.y;
+        let eyeDist = Math.sqrt(dx * dx + dy * dy);
+        // 상수 0.07은 대략적인 기준값 (실험을 통해 조정 가능)
+        let distance = 0.07 / (eyeDist + 0.00001) * 100;
+
+        console.log("distance : ", distance);
+
         // 얼굴 회전 축 벡터 계산
         // X축 (Right): 왼쪽 눈에서 오른쪽 눈을 향하는 벡터
         let dxRight = rightEye.x - leftEye.x;
         let dyRight = rightEye.y - leftEye.y;
         let dzRight = rightEye.z - leftEye.z;
-        let rightMag = Math.sqrt(dxRight*dxRight + dyRight*dyRight + dzRight*dzRight);
+        let rightMag = Math.sqrt(dxRight * dxRight + dyRight * dyRight + dzRight * dzRight);
         dxRight /= rightMag; dyRight /= rightMag; dzRight /= rightMag;
 
         // Y축 (Up): 턱에서 이마를 향하는 벡터
         let dxUp = topOfHead.x - bottomOfChin.x;
         let dyUp = topOfHead.y - bottomOfChin.y;
         let dzUp = topOfHead.z - bottomOfChin.z;
-        let upMag = Math.sqrt(dxUp*dxUp + dyUp*dyUp + dzUp*dzUp);
+        let upMag = Math.sqrt(dxUp * dxUp + dyUp * dyUp + dzUp * dzUp);
         dxUp /= upMag; dyUp /= upMag; dzUp /= upMag;
 
         // Yaw, Pitch, Roll 근사값 계산 (라디안 -> 디그리)
@@ -134,13 +143,14 @@ function handleResults(results, width, height) {
             pitch: pitch,
             yaw: yaw,
             roll: roll,
+            distance: distance,
             noseX: noseTip.x,
             noseY: noseTip.y,
             noseZ: noseTip.z,
             vidW: width,
             vidH: height
         };
-        
+
         // 상태 변화 시에만 콘솔 기록 (로그 폭주 방지)
         if (window.faceData === "") console.log("Tracking Active");
 
