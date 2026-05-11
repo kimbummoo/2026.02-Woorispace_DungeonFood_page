@@ -35,13 +35,13 @@ window.initMediaPipe = async (successFunc) => {
 
         // 실행 시점의 호스트 경로에 맞게 절대 경로(루트기준) 혹은 바른 상대 경로 설정
         const fileset = await FilesetResolver.forVisionTasks("./plugins/mediaPipe/libs/wasm");
-        
+
         const createLandmarker = async (delegateType) => {
             console.log(`FaceLandmarker 생성 시도 (Delegate: ${delegateType})...`);
             return await FaceLandmarker.createFromOptions(fileset, {
-                baseOptions: { 
-                    modelAssetPath: `./plugins/mediaPipe/models/face_landmarker.task`, 
-                    delegate: delegateType 
+                baseOptions: {
+                    modelAssetPath: `./plugins/mediaPipe/models/face_landmarker.task`,
+                    delegate: delegateType
                 },
                 outputFaceBlendshapes: true,
                 runningMode: "VIDEO",
@@ -49,11 +49,7 @@ window.initMediaPipe = async (successFunc) => {
             });
         };
 
-        // S25 시리즈 감지 (SM-S931, SM-S936, SM-S938 등)
-        const isS25 = /SM-S93/i.test(navigator.userAgent);
-
         try {
-            console.log("%c[MediaPipe Status] 테스트를 위해 CPU 모드로 강제 설정합니다.", "color: #ffa500; font-weight: bold;");
             faceLandmarker = await createLandmarker("CPU");
             console.log("%c[MediaPipe Status] FaceLandmarker 생성 완료 (CPU 모드 사용)", "color: #ffa500; font-weight: bold; font-size: 14px;");
         } catch (error) {
@@ -65,20 +61,25 @@ window.initMediaPipe = async (successFunc) => {
         console.log("MediaPipe 준비 완료. 카메라 재생 대기 중...");
 
         // 카메라가 실제로 데이터를 보내기 시작할 때(playing) 트래킹 시작
-        if (inputCanvas.readyState >= 3) { // 이미 재생 중인 경우
+        const startPredicting = () => {
+            console.log("트래킹 루프 시작 - Video Resolution: " + inputCanvas.videoWidth + "x" + inputCanvas.videoHeight);
             predict();
             if (typeof successFunc === "function") successFunc();
+        };
+
+        if (inputCanvas.readyState >= 3) { // 이미 재생 중인 경우
+            startPredicting();
         }
         else {
             inputCanvas.addEventListener('playing', () => {
-                console.log("카메라 재생 시작 - 트래킹을 개시합니다.");
-                predict();
-                if (typeof successFunc === "function") successFunc();
+                console.log("카메라 재생 이벤트 감지 (playing)");
+                // S25 등에서 해상도가 늦게 확정되는 경우를 대비해 약간의 지연 후 시작
+                setTimeout(startPredicting, 500);
             }, { once: true });
         }
     }
     catch (error) {
-        console.error("MediaPipe 초기화 실패:", error);
+        console.error("MediaPipe 초기화 최종 실패:", error);
     }
 };
 
