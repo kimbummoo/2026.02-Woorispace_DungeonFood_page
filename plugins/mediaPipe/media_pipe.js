@@ -53,17 +53,11 @@ window.initMediaPipe = async (successFunc) => {
         const isS25 = /SM-S93/i.test(navigator.userAgent);
 
         try {
-                console.log("%c[MediaPipe Status] S25 기기 감지: 안정성을 위해 CPU 모드로 강제 설정합니다.", "color: #ffa500; font-weight: bold;");
-                faceLandmarker = await createLandmarker("CPU");
-            } else {
-                // 우선 GPU 사용 시도
-                faceLandmarker = await createLandmarker("GPU");
-                console.log("%c[MediaPipe Status] FaceLandmarker 생성 완료 (GPU 가속 사용)", "color: #00ff00; font-weight: bold; font-size: 14px;");
-            }
-            console.warn("[MediaPipe Status] GPU Delegate 초기화 실패. CPU 모드로 전환합니다:", gpuError);
-            // GPU 초기화 실패 시 CPU로 Fallback
+            console.log("%c[MediaPipe Status] 테스트를 위해 CPU 모드로 강제 설정합니다.", "color: #ffa500; font-weight: bold;");
             faceLandmarker = await createLandmarker("CPU");
             console.log("%c[MediaPipe Status] FaceLandmarker 생성 완료 (CPU 모드 사용)", "color: #ffa500; font-weight: bold; font-size: 14px;");
+        } catch (error) {
+            console.error("[MediaPipe Status] FaceLandmarker 초기화 실패:", error);
         }
 
         isInitialized = true;
