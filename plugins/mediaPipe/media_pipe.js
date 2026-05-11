@@ -31,17 +31,42 @@ window.initMediaPipe = async (successFunc) => {
     }
 
     try {
-
-        console.log("MediaPipe 모델 로딩 중...");
+        console.log("MediaPipe 모델 로딩 중... (UserAgent: " + navigator.userAgent + ")");
 
         // 실행 시점의 호스트 경로에 맞게 절대 경로(루트기준) 혹은 바른 상대 경로 설정
         const fileset = await FilesetResolver.forVisionTasks("./plugins/mediaPipe/libs/wasm");
-        faceLandmarker = await FaceLandmarker.createFromOptions(fileset, {
-            baseOptions: { modelAssetPath: `./plugins/mediaPipe/models/face_landmarker.task`, delegate: "GPU" },
-            outputFaceBlendshapes: true,
-            runningMode: "VIDEO",
-            numFaces: 1
-        });
+        
+        const createLandmarker = async (delegateType) => {
+            console.log(`FaceLandmarker 생성 시도 (Delegate: ${delegateType})...`);
+            return await FaceLandmarker.createFromOptions(fileset, {
+                baseOptions: { 
+                    modelAssetPath: `./plugins/mediaPipe/models/face_landmarker.task`, 
+                    delegate: delegateType 
+                },
+                outputFaceBlendshapes: true,
+                runningMode: "VIDEO",
+                numFaces: 1
+            });
+        };
+
+        // S25 시리즈 감지 (SM-S931, SM-S936, SM-S938 등)
+        const isS25 = /SM-S93/i.test(navigator.userAgent);
+
+        try {
+            if (isS25) {
+                console.log("S25 기기 감지: 안정성을 위해 CPU 모드로 강제 설정합니다.");
+                faceLandmarker = await createLandmarker("CPU");
+            } else {
+                // 우선 GPU 사용 시도
+                faceLandmarker = await createLandmarker("GPU");
+                console.log("FaceLandmarker 생성 완료 (GPU 가속 사용)");
+            }
+        } catch (gpuError) {
+            console.warn("GPU Delegate 초기화 실패. CPU 모드로 전환합니다:", gpuError);
+            // GPU 초기화 실패 시 CPU로 Fallback
+            faceLandmarker = await createLandmarker("CPU");
+            console.log("FaceLandmarker 생성 완료 (CPU 모드 사용)");
+        }
 
         isInitialized = true;
 
